@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="zh-TW">
 <head>
-<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🎯</text></svg>">
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🎯</text></svg>">
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>標槍極速反應賽 - 全球線上連線版</title>
@@ -19,9 +19,10 @@
             color: #fff;
             display: flex;
             justify-content: center;
-            align-items: center;
+            align-items: flex-start;
             min-height: 100vh;
-            padding: 20px;
+            padding: 20px 10px;
+            gap: 20px;
         }
 
         .game-container {
@@ -47,18 +48,37 @@
             color: #94a3b8;
         }
 
+        .user-info {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .user-avatar {
+            width: 24px;
+            height: 24px;
+            border-radius: 50%;
+            display: none;
+        }
+
         .user-btn {
-            background: #3b82f6;
+            background: #4285f4;
             color: white;
             border: none;
-            padding: 5px 12px;
+            padding: 6px 12px;
             border-radius: 5px;
             cursor: pointer;
             font-size: 12px;
             font-weight: bold;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            transition: background 0.2s;
         }
 
-        .user-btn:hover { background: #2563eb; }
+        .user-btn:hover { background: #3367d6; }
+        .user-btn.logout-btn { background: #64748b; }
+        .user-btn.logout-btn:hover { background: #475569; }
 
         h1 { font-size: 22px; margin-bottom: 15px; color: #ef4444; }
 
@@ -160,93 +180,88 @@
         .leaderboard-item { display: flex; justify-content: space-between; padding: 4px 6px; color: #cbd5e1; border-bottom: 1px solid #1e293b; }
         .leaderboard-item:last-child { border-bottom: none; }
         .rank-number { font-weight: bold; color: #f59e0b; width: 25px; }
-   /* 側邊欄廣告與頁面三欄式排版 */
-body {
-    background-color: #0f172a;
-    color: #fff;
-    display: flex;
-    justify-content: center;
-    align-items: flex-start;
-    min-height: 100vh;
-    padding: 20px 10px;
-    gap: 20px;
-}
 
-.ad-sidebar {
-    width: 160px;
-    min-height: 600px;
-    background-color: #1e293b;
-    border: 2px dashed #334155;
-    border-radius: 12px;
-    display: flex;
-    flex-direction: column;
-    justify-content: center;
-    align-items: center;
-    color: #64748b;
-    font-size: 13px;
-    text-align: center;
-    padding: 10px;
-}
+        .ad-sidebar {
+            width: 160px;
+            min-height: 600px;
+            background-color: #1e293b;
+            border: 2px dashed #334155;
+            border-radius: 12px;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            color: #64748b;
+            font-size: 13px;
+            text-align: center;
+            padding: 10px;
+        }
 
-@media (max-width: 768px) {
-    .ad-sidebar {
-        display: none;
-    }
-}
- </style>
-    <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-9119320101137247"
-     crossorigin="anonymous"></script>
-    <!-- 載入 Firebase 雲端 SDK -->
+        @media (max-width: 768px) {
+            .ad-sidebar { display: none; }
+        }
+    </style>
+
+    <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-9119320101137247" crossorigin="anonymous"></script>
+    <!-- 載入 Firebase SDK (含 Auth 身份驗證) -->
     <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-auth-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
 </head>
 <body>
-<div class="ad-sidebar">
+
+    <div class="ad-sidebar">
         <span>廣告區域 (左)</span>
     </div>
+
     <div class="game-container">
-    <div class="user-bar">
-    
-        <span>玩家: <strong id="username-display" style="color:#38bdf8;">訪客</strong></span>
-        <button class="user-btn" onclick="setPlayerName()">設定暱稱</button>
+        <div class="user-bar">
+            <div class="user-info">
+                <img id="user-avatar" class="user-avatar" src="" alt="頭像">
+                <span>玩家: <strong id="username-display" style="color:#38bdf8;">未登入 (訪客)</strong></span>
+            </div>
+            <button id="auth-btn" class="user-btn" onclick="toggleAuth()">Google 登入</button>
+        </div>
+
+        <h1>🔥 地獄級標槍反應賽</h1>
+
+        <div class="stats-board">
+            <div>時間: <span id="time" class="stat-val">20</span>s</div>
+            <div>成績: <span id="distance" class="stat-val">0.00</span>m</div>
+        </div>
+
+        <div class="stage">
+            <div id="speed-display" class="speed-badge">等待: 1.2s</div>
+            <div id="combo-display" class="combo-badge">Combo: 0</div>
+            <div id="arrow-display" class="arrow-display">🎯</div>
+            <div id="target-text" class="target-hint">準備接受挑戰！</div>
+        </div>
+
+        <div id="feedback" class="feedback-text"></div>
+
+        <div class="controls-grid">
+            <button class="btn-arrow btn-up" onclick="handleInput('ArrowUp')">▲ (W)</button>
+            <button class="btn-arrow btn-left" onclick="handleInput('ArrowLeft')">◄ (A)</button>
+            <button class="btn-arrow btn-down" onclick="handleInput('ArrowDown')">▼ (S)</button>
+            <button class="btn-arrow btn-right" onclick="handleInput('ArrowRight')">► (D)</button>
+        </div>
+
+        <button id="start-btn" class="start-btn" onclick="startGame()">開始地獄挑戰</button>
+        <div class="instruction">支援按鍵：方向鍵 (⬆️⬇️⬅️➡️) 或 WASD</div>
+
+        <div class="leaderboard-section">
+            <div class="leaderboard-title">🌐 全球即時排行榜 (Top 5)</div>
+            <div id="leaderboard-list">連線至雲端中...</div>
+        </div>
     </div>
 
-    <h1>🔥 地獄級標槍反應賽</h1>
-
-    <div class="stats-board">
-        <div>時間: <span id="time" class="stat-val">20</span>s</div>
-        <div>成績: <span id="distance" class="stat-val">0.00</span>m</div>
+    <div class="ad-sidebar">
+        <span>廣告區域 (右)</span>
     </div>
 
-    <div class="stage">
-        <div id="speed-display" class="speed-badge">等待: 1.2s</div>
-        <div id="combo-display" class="combo-badge">Combo: 0</div>
-        <div id="arrow-display" class="arrow-display">🎯</div>
-        <div id="target-text" class="target-hint">準備接受挑戰！</div>
-    </div>
-
-    <div id="feedback" class="feedback-text"></div>
-
-    <div class="controls-grid">
-        <button class="btn-arrow btn-up" onclick="handleInput('ArrowUp')">▲ (W)</button>
-        <button class="btn-arrow btn-left" onclick="handleInput('ArrowLeft')">◄ (A)</button>
-        <button class="btn-arrow btn-down" onclick="handleInput('ArrowDown')">▼ (S)</button>
-        <button class="btn-arrow btn-right" onclick="handleInput('ArrowRight')">► (D)</button>
-    </div>
-
-    <button id="start-btn" class="start-btn" onclick="startGame()">開始地獄挑戰</button>
-    <div class="instruction">支援按鍵：方向鍵 (⬆️⬇️⬅️➡️) 或 WASD</div>
-
-    <div class="leaderboard-section">
-        <div class="leaderboard-title">🌐 全球即時排行榜 (Top 5)</div>
-        <div id="leaderboard-list">連線至雲端中...</div>
-    </div>
-</div>
-<script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
 <script>
     const firebaseConfig = {
-       apiKey: "AIzaSyBBzm8aH-Y1SDq85NBdb9R1P0w7QC7U_RU",
+        apiKey: "AIzaSyBBzm8aH-Y1SDq85NBdb9R1P0w7QC7U_RU",
         authDomain: "javelin-game.firebaseapp.com",
         projectId: "javelin-game",
         storageBucket: "javelin-game.firebasestorage.app",
@@ -255,9 +270,12 @@ body {
         measurementId: "G-FZ1MGBTGDE"
     };
 
-    // 初始化 Firebase 與 Firestore
     firebase.initializeApp(firebaseConfig);
     const db = firebase.firestore();
+    const auth = firebase.auth();
+
+    // 🎯 自動清除以前舊的本地端暱稱紀錄
+    localStorage.removeItem('javelin_player_name');
 
     // --- 遊戲設定 ---
     const GAME_DURATION = 20;       
@@ -291,7 +309,7 @@ body {
     let gameTimer = null;
     let refreshTimer = null;
     let currentRefreshRate = INITIAL_REFRESH;
-    let currentPlayerName = "訪客";
+    let currentUser = null;
 
     const arrowEl = document.getElementById('arrow-display');
     const targetTextEl = document.getElementById('target-text');
@@ -302,33 +320,56 @@ body {
     const speedEl = document.getElementById('speed-display');
     const startBtn = document.getElementById('start-btn');
     const usernameDisplay = document.getElementById('username-display');
+    const userAvatar = document.getElementById('user-avatar');
+    const authBtn = document.getElementById('auth-btn');
     const leaderboardList = document.getElementById('leaderboard-list');
 
     window.onload = function() {
-        let savedName = localStorage.getItem('javelin_player_name');
-        if (savedName) {
-            currentPlayerName = savedName;
-            usernameDisplay.innerText = currentPlayerName;
-        } else {
-            setPlayerName();
-        }
-        // 即時監聽雲端排行榜
         listenToGlobalLeaderboard();
+
+        // 🎯 監聽登入狀態改變
+        auth.onAuthStateChanged((user) => {
+            if (user) {
+                currentUser = user;
+                usernameDisplay.innerText = user.displayName || "Google 玩家";
+                if (user.photoURL) {
+                    userAvatar.src = user.photoURL;
+                    userAvatar.style.display = 'inline-block';
+                }
+                authBtn.innerText = "登出";
+                authBtn.className = "user-btn logout-btn";
+            } else {
+                currentUser = null;
+                usernameDisplay.innerText = "未登入 (訪客)";
+                userAvatar.style.display = 'none';
+                authBtn.innerText = "Google 登入";
+                authBtn.className = "user-btn";
+            }
+        });
     };
+
+    // 🎯 登入 / 登出 切換
+    function toggleAuth() {
+        if (currentUser) {
+            auth.signOut().then(() => {
+                alert("已成功登出！");
+            });
+        } else {
+            const provider = new firebase.auth.GoogleAuthProvider();
+            auth.signInWithPopup(provider).catch((error) => {
+                console.error("登入失敗:", error);
+                alert("登入失敗，請重試！");
+            });
+        }
+    }
 
     window.addEventListener('keydown', (e) => {
         if (!isPlaying) return;
-        if (keyMap[e.key]) handleInput(keyMap[e.key]);
-    });
-
-    function setPlayerName() {
-        let name = prompt("請輸入您的全球玩家名稱：", currentPlayerName);
-        if (name && name.trim() !== "") {
-            currentPlayerName = name.trim();
-            localStorage.setItem('javelin_player_name', currentPlayerName);
-            usernameDisplay.innerText = currentPlayerName;
+        if (keyMap[e.key]) {
+            e.preventDefault();
+            handleInput(keyMap[e.key]);
         }
-    }
+    });
 
     function startGame() {
         distance = 0.00;
@@ -351,10 +392,10 @@ body {
 
     function nextTarget() {
         if (!isPlaying) return;
-        clearTimeout(refreshTimer);
+        if (refreshTimer) clearTimeout(refreshTimer);
 
         let progress = (GAME_DURATION - timeLeft) / GAME_DURATION; 
-        currentRefreshRate = Math.max(MIN_REFRESH, INITIAL_REFRESH - (progress * 850));
+        currentRefreshRate = Math.max(MIN_REFRESH, INITIAL_REFRESH - (progress * 750));
         speedEl.innerText = `等待: ${(currentRefreshRate / 1000).toFixed(2)}s`;
 
         let newTarget;
@@ -380,6 +421,7 @@ body {
 
     function handleInput(inputDir) {
         if (!isPlaying) return;
+        if (refreshTimer) clearTimeout(refreshTimer);
 
         if (inputDir === currentTarget) {
             combo++;
@@ -410,15 +452,19 @@ body {
     function endGame() {
         isPlaying = false;
         clearInterval(gameTimer);
-        clearTimeout(refreshTimer);
+        if (refreshTimer) clearTimeout(refreshTimer);
         
         arrowEl.innerText = '🏁';
         targetTextEl.innerText = '比賽結束！';
         
         let finalDist = parseFloat(distance.toFixed(2));
         
-        // 自動上傳成績至 Firebase 雲端資料庫
-        uploadScoreToCloud(currentPlayerName, finalDist);
+        // 🎯 只有登入的玩家會上傳成績，訪客會提醒登入
+        if (currentUser) {
+            uploadScoreToCloud(currentUser.displayName || "匿名玩家", finalDist, currentUser.uid);
+        } else {
+            alert("你目前是訪客身份，登入 Google 帳號即可將成績登上全球排行榜！");
+        }
 
         let evalText = (finalDist >= 98.48) ? '🏆 破世界紀錄！' : (finalDist >= 80) ? '🥇 奧運金牌！' : '🥉 繼續加油！';
         feedbackEl.innerText = `${evalText} (${finalDist}m)`;
@@ -427,20 +473,19 @@ body {
         startBtn.style.display = 'block';
     }
 
-    // 📤 上傳成績至雲端
-    function uploadScoreToCloud(name, score) {
+    function uploadScoreToCloud(name, score, uid) {
         db.collection("leaderboard").add({
             name: name,
             score: score,
+            uid: uid,
             timestamp: firebase.firestore.FieldValue.serverTimestamp()
         }).then(() => {
-            console.log("成績已即時同步上傳至雲端！");
+            console.log("成績已同步上傳至雲端！");
         }).catch((error) => {
             console.error("上傳失敗: ", error);
         });
     }
 
-    // 📥 即時監聽全球排行榜 Top 5
     function listenToGlobalLeaderboard() {
         db.collection("leaderboard")
           .orderBy("score", "desc")
@@ -462,9 +507,6 @@ body {
           });
     }
 </script>
-<div class="ad-sidebar">
-        <span>廣告區域 (右)</span>
-    </div>
 
 </body>
 </html>
