@@ -341,7 +341,7 @@
                 customName = savedCustomName || user.displayName || "匿名玩家";
                 
                 usernameDisplay.innerText = customName;
-                uidSubtext.innerText = `UID: ${user.uid.substring(0, 8)}...`;
+                uidSubtext.innerText = `UID: ${user.uid.substring(0, 6)}...`;
                 if (user.photoURL) {
                     userAvatar.src = user.photoURL;
                     userAvatar.style.display = 'block';
@@ -376,6 +376,7 @@
         }
     }
 
+    // 🎯 修改暱稱：即時更新雲端排行榜上該 UID 的所有名字
     function customPlayerName() {
         if (!currentUser) return;
         let defaultName = customName || currentUser.displayName || "匿名玩家";
@@ -385,7 +386,15 @@
             customName = newName.trim();
             localStorage.setItem('javelin_custom_name_' + currentUser.uid, customName);
             usernameDisplay.innerText = customName;
-            alert("暱稱修改成功！下次上傳成績或重新整理就會以新暱稱顯示。");
+            
+            // 立即同步雲端排行榜上該 UID 的名字
+            db.collection("leaderboard").where("uid", "==", currentUser.uid).get().then((snapshot) => {
+                snapshot.forEach((doc) => {
+                    doc.ref.update({ name: customName });
+                });
+            });
+
+            alert("暱稱修改成功！排行榜名字已即時同步更新。");
         }
     }
 
@@ -498,28 +507,24 @@
         startBtn.style.display = 'block';
     }
 
-    // 🎯 以 UID 為唯一識別：同 UID 只會保留最高分與最新暱稱，同名也不會衝突
+    // 🎯 以 UID 為核心：確保同 UID 只保留最高分，且所有該 UID 的名字永遠保持最新
     function uploadScoreToCloud(name, score, uid) {
         if (!uid) return;
         const leaderboardRef = db.collection("leaderboard");
         
         leaderboardRef.where("uid", "==", uid).get().then((querySnapshot) => {
             if (!querySnapshot.empty) {
-                let docId = querySnapshot.docs[0].id;
-                let oldScore = querySnapshot.docs[0].data().score;
-                
-                // 無論分數有沒有破紀錄，都更新成玩家當前最新的暱稱與最新成績
-                if (score > oldScore) {
-                    leaderboardRef.doc(docId).update({
-                        name: name,
-                        score: score,
-                        timestamp: firebase.firestore.FieldValue.serverTimestamp()
-                    });
-                } else {
-                    leaderboardRef.doc(docId).update({
-                        name: name
-                    });
-                }
+                querySnapshot.forEach((doc) => {
+                    let docId = doc.id;
+                    let oldScore = doc.data().score;
+                    
+                    let updateData = { name: name };
+                    if (score > oldScore) {
+                        updateData.score = score;
+                        updateData.timestamp = firebase.firestore.FieldValue.serverTimestamp();
+                    }
+                    leaderboardRef.doc(docId).update(updateData);
+                });
             } else {
                 leaderboardRef.add({
                     name: name,
@@ -533,7 +538,7 @@
         });
     }
 
-   function listenToGlobalLeaderboard() {
+    function listenToGlobalLeaderboard() {
         db.collection("leaderboard")
           .orderBy("score", "desc")
           .limit(5)
@@ -542,17 +547,15 @@
               let rank = 1;
               snapshot.forEach((doc) => {
                   let data = doc.data();
-                  // 🎯 取得 UID 的前 6 碼作為識別
                   let shortUid = data.uid ? data.uid.substring(0, 6) : "guest";
                   let row = document.createElement('div');
                   row.className = 'leaderboard-item';
-                  // 🎯 這裡同時把暱稱與 UID 組合渲染出來
                   row.innerHTML = `
-                      <div style="display: flex; align-items: center; gap: 8px; text-align: left;">
+                      <div style="display: flex; align-items: center; gap: 8px;">
                           <span class="rank-number">${rank}.</span>
                           <div class="player-meta">
                               <span class="player-name">${data.name}</span>
-                              <span class="player-uid" style="font-size: 10px; color: #64748b;">UID: ${shortUid}...</span>
+                              <span class="player-uid">UID: ${shortUid}...</span>
                           </div>
                       </div>
                       <span style="color:#34d399; font-weight:bold; font-size:15px;">${data.score.toFixed(2)}m</span>
