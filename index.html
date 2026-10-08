@@ -203,7 +203,6 @@
     </style>
 
     <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-9119320101137247" crossorigin="anonymous"></script>
-    <!-- 載入 Firebase SDK (含 Auth 身份驗證) -->
     <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-auth-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
@@ -220,7 +219,10 @@
                 <img id="user-avatar" class="user-avatar" src="" alt="頭像">
                 <span>玩家: <strong id="username-display" style="color:#38bdf8;">未登入 (訪客)</strong></span>
             </div>
-            <button id="auth-btn" class="user-btn" onclick="toggleAuth()">Google 登入</button>
+            <div style="display: flex; gap: 5px;">
+                <button id="edit-name-btn" class="user-btn" style="display:none; background:#0284c7;" onclick="customPlayerName()">改暱稱</button>
+                <button id="auth-btn" class="user-btn" onclick="toggleAuth()">Google 登入</button>
+            </div>
         </div>
 
         <h1>🔥 地獄級標槍反應賽</h1>
@@ -274,10 +276,8 @@
     const db = firebase.firestore();
     const auth = firebase.auth();
 
-    // 🎯 自動清除以前舊的本地端暱稱紀錄
     localStorage.removeItem('javelin_player_name');
 
-    // --- 遊戲設定 ---
     const GAME_DURATION = 20;       
     const INITIAL_REFRESH = 1200;   
     const MIN_REFRESH = 750;        
@@ -310,6 +310,7 @@
     let refreshTimer = null;
     let currentRefreshRate = INITIAL_REFRESH;
     let currentUser = null;
+    let customName = null; // 記錄自訂暱稱
 
     const arrowEl = document.getElementById('arrow-display');
     const targetTextEl = document.getElementById('target-text');
@@ -327,28 +328,32 @@
     window.onload = function() {
         listenToGlobalLeaderboard();
 
-        // 🎯 監聽登入狀態改變
         auth.onAuthStateChanged((user) => {
             if (user) {
                 currentUser = user;
-                usernameDisplay.innerText = user.displayName || "Google 玩家";
+                let savedCustomName = localStorage.getItem('javelin_custom_name_' + user.uid);
+                customName = savedCustomName || user.displayName || "匿名玩家";
+                
+                usernameDisplay.innerText = customName;
                 if (user.photoURL) {
                     userAvatar.src = user.photoURL;
                     userAvatar.style.display = 'inline-block';
                 }
+                document.getElementById('edit-name-btn').style.display = 'inline-block';
                 authBtn.innerText = "登出";
                 authBtn.className = "user-btn logout-btn";
             } else {
                 currentUser = null;
+                customName = null;
                 usernameDisplay.innerText = "未登入 (訪客)";
                 userAvatar.style.display = 'none';
+                document.getElementById('edit-name-btn').style.display = 'none';
                 authBtn.innerText = "Google 登入";
                 authBtn.className = "user-btn";
             }
         });
     };
 
-    // 🎯 登入 / 登出 切換
     function toggleAuth() {
         if (currentUser) {
             auth.signOut().then(() => {
@@ -360,6 +365,19 @@
                 console.error("登入失敗:", error);
                 alert("登入失敗，請重試！");
             });
+        }
+    }
+
+    function customPlayerName() {
+        if (!currentUser) return;
+        let defaultName = customName || currentUser.displayName || "匿名玩家";
+        let newName = prompt("請輸入你想在排行榜顯示的遊戲暱稱：", defaultName);
+        
+        if (newName && newName.trim() !== "") {
+            customName = newName.trim();
+            localStorage.setItem('javelin_custom_name_' + currentUser.uid, customName);
+            usernameDisplay.innerText = customName;
+            alert("暱稱修改成功！上傳成績時將使用此暱稱。");
         }
     }
 
@@ -459,9 +477,8 @@
         
         let finalDist = parseFloat(distance.toFixed(2));
         
-        // 🎯 只有登入的玩家會上傳成績，訪客會提醒登入
         if (currentUser) {
-            uploadScoreToCloud(currentUser.displayName || "匿名玩家", finalDist, currentUser.uid);
+            uploadScoreToCloud(customName || currentUser.displayName || "匿名玩家", finalDist, currentUser.uid);
         } else {
             alert("你目前是訪客身份，登入 Google 帳號即可將成績登上全球排行榜！");
         }
