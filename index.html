@@ -1,6 +1,7 @@
 <!DOCTYPE html>
 <html lang="zh-TW">
 <head>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🎯</text></svg>">
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>標槍極速反應賽 - 全球線上連線版</title>
@@ -159,16 +160,53 @@
         .leaderboard-item { display: flex; justify-content: space-between; padding: 4px 6px; color: #cbd5e1; border-bottom: 1px solid #1e293b; }
         .leaderboard-item:last-child { border-bottom: none; }
         .rank-number { font-weight: bold; color: #f59e0b; width: 25px; }
-    </style>
+   /* 側邊欄廣告與頁面三欄式排版 */
+body {
+    background-color: #0f172a;
+    color: #fff;
+    display: flex;
+    justify-content: center;
+    align-items: flex-start;
+    min-height: 100vh;
+    padding: 20px 10px;
+    gap: 20px;
+}
 
+.ad-sidebar {
+    width: 160px;
+    min-height: 600px;
+    background-color: #1e293b;
+    border: 2px dashed #334155;
+    border-radius: 12px;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    color: #64748b;
+    font-size: 13px;
+    text-align: center;
+    padding: 10px;
+}
+
+@media (max-width: 768px) {
+    .ad-sidebar {
+        display: none;
+    }
+}
+ </style>
+    <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-9119320101137247"
+     crossorigin="anonymous"></script>
     <!-- 載入 Firebase 雲端 SDK -->
     <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
 </head>
 <body>
-
-<div class="game-container">
+<div class="ad-sidebar">
+        <span>廣告區域 (左)</span>
+    </div>
+    <div class="game-container">
     <div class="user-bar">
+    
         <span>玩家: <strong id="username-display" style="color:#38bdf8;">訪客</strong></span>
         <button class="user-btn" onclick="setPlayerName()">設定暱稱</button>
     </div>
@@ -425,6 +463,9 @@
           });
     }
 </script>
+<div class="ad-sidebar">
+        <span>廣告區域 (右)</span>
+    </div>
 
 </body>
 </html>
