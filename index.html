@@ -1,10 +1,9 @@
 <!DOCTYPE html>
 <html lang="zh-TW">
 <head>
-    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🎯</text></svg>">
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>標槍極速反應賽 - 全球線上連線版</title>
+    <title>標槍極速反應賽 - 全球線上對戰版</title>
     <style>
         * {
             box-sizing: border-box;
@@ -63,7 +62,7 @@
         }
 
         .user-btn {
-            background: #4285f4;
+            background: #2563eb;
             color: white;
             border: none;
             padding: 6px 12px;
@@ -71,17 +70,14 @@
             cursor: pointer;
             font-size: 12px;
             font-weight: bold;
-            display: flex;
-            align-items: center;
-            gap: 5px;
             transition: background 0.2s;
         }
 
-        .user-btn:hover { background: #3367d6; }
-        .user-btn.logout-btn { background: #64748b; }
-        .user-btn.logout-btn:hover { background: #475569; }
+        .user-btn:hover { background: #1d4ed8; }
+        .user-btn.logout-btn { background: #475569; }
+        .user-btn.logout-btn:hover { background: #334155; }
 
-        h1 { font-size: 22px; margin-bottom: 15px; color: #ef4444; }
+        h1 { font-size: 20px; margin-bottom: 15px; color: #f87171; letter-spacing: 1px; }
 
         .stats-board {
             display: flex;
@@ -97,8 +93,8 @@
         .stat-val { color: #38bdf8; font-size: 18px; }
 
         .stage {
-            height: 160px;
-            background: linear-gradient(180deg, #1e293b 0%, #450a0a 100%);
+            height: 180px;
+            background: linear-gradient(180deg, #1e293b 0%, #064e3b 100%);
             border-radius: 15px;
             display: flex;
             flex-direction: column;
@@ -106,7 +102,7 @@
             align-items: center;
             position: relative;
             margin-bottom: 15px;
-            border: 2px solid #991b1b;
+            border: 2px solid #059669;
             overflow: hidden;
         }
 
@@ -115,12 +111,73 @@
             line-height: 1;
             transition: transform 0.05s ease-out;
             color: #f87171;
-            text-shadow: 0 0 20px rgba(248, 113, 113, 0.6);
         }
 
-        .target-hint { font-size: 18px; color: #e2e8f0; margin-top: 5px; font-weight: bold; }
-        .combo-badge { position: absolute; top: 10px; right: 15px; font-size: 14px; color: #f59e0b; font-weight: bold; }
-        .speed-badge { position: absolute; top: 10px; left: 15px; font-size: 12px; color: #ef4444; font-weight: bold; }
+        /* 擬真標槍與草地刻度投擲動畫區 */
+        .throwing-field {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            display: none;
+            top: 0;
+            left: 0;
+            background: linear-gradient(180deg, #0f172a 20%, #065f46 100%);
+            overflow: hidden;
+        }
+
+        .field-grass-line {
+            position: absolute;
+            bottom: 30px;
+            width: 200%;
+            height: 6px;
+            background: #10b981;
+            display: flex;
+            align-items: center;
+            transition: transform 1.5s cubic-bezier(0.1, 0.8, 0.2, 1);
+        }
+
+        .track-marker {
+            position: absolute;
+            bottom: 8px;
+            font-size: 11px;
+            color: #fde047;
+            font-weight: bold;
+            transform: translateX(-50%);
+            border-left: 2px dashed rgba(253, 224, 71, 0.6);
+            height: 40px;
+            display: flex;
+            align-items: flex-end;
+            padding-left: 3px;
+        }
+
+        /* 真實標槍外觀 */
+        .real-javelin {
+            position: absolute;
+            width: 50px;
+            height: 6px;
+            background: linear-gradient(90deg, #f8fafc 0%, #cbd5e1 80%, #b91c1c 100%);
+            border-radius: 3px;
+            bottom: 42px;
+            left: 15px;
+            transform-origin: left center;
+            transform: rotate(-35deg);
+            transition: all 1.5s cubic-bezier(0.1, 0.8, 0.2, 1);
+            z-index: 5;
+            box-shadow: 0 3px 6px rgba(0,0,0,0.4);
+        }
+        .real-javelin::after {
+            content: '';
+            position: absolute;
+            right: -6px;
+            top: -2px;
+            border-top: 5px solid transparent;
+            border-bottom: 5px solid transparent;
+            border-left: 8px solid #f1f5f9;
+        }
+
+        .target-hint { font-size: 16px; color: #e2e8f0; margin-top: 5px; font-weight: bold; }
+        .combo-badge { position: absolute; top: 10px; right: 15px; font-size: 13px; color: #f59e0b; font-weight: bold; z-index: 2; }
+        .speed-badge { position: absolute; top: 10px; left: 15px; font-size: 12px; color: #f87171; font-weight: bold; z-index: 2; }
 
         .feedback-text { height: 24px; font-weight: bold; font-size: 15px; margin-bottom: 15px; }
         .correct { color: #34d399; }
@@ -158,10 +215,11 @@
             color: #ffffff;
             border: none;
             border-radius: 10px;
-            font-size: 18px;
+            font-size: 16px;
             font-weight: bold;
             cursor: pointer;
             margin-top: 15px;
+            letter-spacing: 1px;
         }
 
         .start-btn:hover { background-color: #dc2626; }
@@ -177,7 +235,7 @@
             border: 1px solid #334155;
         }
 
-        .leaderboard-title { color: #f59e0b; font-weight: bold; margin-bottom: 8px; text-align: center; font-size: 14px; }
+        .leaderboard-title { color: #f59e0b; font-weight: bold; margin-bottom: 8px; text-align: center; font-size: 14px; letter-spacing: 0.5px; }
         .leaderboard-item { display: flex; justify-content: space-between; align-items: center; padding: 6px 8px; color: #cbd5e1; border-bottom: 1px solid #1e293b; }
         .leaderboard-item:last-child { border-bottom: none; }
         .rank-number { font-weight: bold; color: #f59e0b; width: 20px; }
@@ -214,7 +272,7 @@
 <body>
 
     <div class="ad-sidebar">
-        <span>廣告區域 (左)</span>
+        <span>廣告區域</span>
     </div>
 
     <div class="game-container">
@@ -227,23 +285,34 @@
                 </div>
             </div>
             <div style="display: flex; gap: 5px;">
-                <button id="edit-name-btn" class="user-btn" style="display:none; background:#0284c7;" onclick="customPlayerName()">改暱稱</button>
+                <button id="edit-name-btn" class="user-btn" style="display:none; background:#0284c7;" onclick="customPlayerName()">修改暱稱</button>
                 <button id="auth-btn" class="user-btn" onclick="toggleAuth()">Google 登入</button>
             </div>
         </div>
 
-        <h1>🔥 地獄級標槍反應賽</h1>
+        <h1>極速反應標槍競技場</h1>
 
         <div class="stats-board">
-            <div>時間: <span id="time" class="stat-val">20</span>s</div>
-            <div>成績: <span id="distance" class="stat-val">0.00</span>m</div>
+            <div>剩餘時間: <span id="time" class="stat-val">20</span>s</div>
+            <div>投擲成績: <span id="distance" class="stat-val">0.00</span>m</div>
         </div>
 
         <div class="stage">
             <div id="speed-display" class="speed-badge">等待: 1.2s</div>
-            <div id="combo-display" class="combo-badge">Combo: 0</div>
-            <div id="arrow-display" class="arrow-display">🎯</div>
-            <div id="target-text" class="target-hint">準備接受挑戰！</div>
+            <div id="combo-display" class="combo-badge">連擊: 0</div>
+            
+            <!-- 正常遊戲輸入區 -->
+            <div id="normal-game-view" style="width: 100%;">
+                <div id="arrow-display" class="arrow-display">▲</div>
+                <div id="target-text" class="target-hint">準備開始挑戰</div>
+            </div>
+
+            <!-- 動態草地刻度與真標槍投擲動畫區 -->
+            <div id="throwing-field" class="throwing-field">
+                <div style="position: absolute; top: 10px; left: 12px; font-size: 11px; color: #34d399; font-weight: bold; z-index: 10;">標槍落點軌跡</div>
+                <div id="field-grass-line" class="field-grass-line"></div>
+                <div id="real-javelin" class="real-javelin"></div>
+            </div>
         </div>
 
         <div id="feedback" class="feedback-text"></div>
@@ -255,17 +324,17 @@
             <button class="btn-arrow btn-right" onclick="handleInput('ArrowRight')">► (D)</button>
         </div>
 
-        <button id="start-btn" class="start-btn" onclick="startGame()">開始地獄挑戰</button>
-        <div class="instruction">支援按鍵：方向鍵 (⬆️⬇️⬅️➡️) 或 WASD</div>
+        <button id="start-btn" class="start-btn" onclick="startGame()">開始挑戰</button>
+        <div class="instruction">操作提示：使用方向鍵或 WASD 進行反應輸入</div>
 
         <div class="leaderboard-section">
-            <div class="leaderboard-title">🌐 全球即時排行榜 (Top 5)</div>
-            <div id="leaderboard-list">連線至雲端中...</div>
+            <div class="leaderboard-title">全球即時排行榜 TOP 5</div>
+            <div id="leaderboard-list">正在連線至雲端伺服器...</div>
         </div>
     </div>
 
     <div class="ad-sidebar">
-        <span>廣告區域 (右)</span>
+        <span>廣告區域</span>
     </div>
 
 <script>
@@ -298,10 +367,10 @@
     };
 
     const dirMap = {
-        'ArrowUp': { text: '向上 ⬆️ (W)', icon: '⬆️' },
-        'ArrowDown': { text: '向下 ⬇️ (S)', icon: '⬇️' },
-        'ArrowLeft': { text: '向左 ⬅️ (A)', icon: '⬅️' },
-        'ArrowRight': { text: '向右 ➡️ (D)', icon: '➡️' }
+        'ArrowUp': { text: '向上 (W)', icon: '▲' },
+        'ArrowDown': { text: '向下 (S)', icon: '▼' },
+        'ArrowLeft': { text: '向左 (A)', icon: '◄' },
+        'ArrowRight': { text: '向右 (D)', icon: '►' }
     };
 
     const directions = ['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'];
@@ -317,6 +386,10 @@
     let currentUser = null;
     let customName = null;
 
+    const normalGameView = document.getElementById('normal-game-view');
+    const throwingField = document.getElementById('throwing-field');
+    const fieldGrassLine = document.getElementById('field-grass-line');
+    const realJavelin = document.getElementById('real-javelin');
     const arrowEl = document.getElementById('arrow-display');
     const targetTextEl = document.getElementById('target-text');
     const distanceEl = document.getElementById('distance');
@@ -365,36 +438,34 @@
     function toggleAuth() {
         if (currentUser) {
             auth.signOut().then(() => {
-                alert("已成功登出！");
+                alert("已成功登出");
             });
         } else {
             const provider = new firebase.auth.GoogleAuthProvider();
             auth.signInWithPopup(provider).catch((error) => {
                 console.error("登入失敗:", error);
-                alert("登入失敗，請重試！");
+                alert("登入失敗，請重試");
             });
         }
     }
 
-    // 🎯 修改暱稱：即時更新雲端排行榜上該 UID 的所有名字
     function customPlayerName() {
         if (!currentUser) return;
         let defaultName = customName || currentUser.displayName || "匿名玩家";
-        let newName = prompt("請輸入你想在排行榜顯示的遊戲暱稱（可與他人重複）：", defaultName);
+        let newName = prompt("請輸入您的遊戲暱稱（可與他人重複）：", defaultName);
         
         if (newName && newName.trim() !== "") {
             customName = newName.trim();
             localStorage.setItem('javelin_custom_name_' + currentUser.uid, customName);
             usernameDisplay.innerText = customName;
             
-            // 立即同步雲端排行榜上該 UID 的名字
             db.collection("leaderboard").where("uid", "==", currentUser.uid).get().then((snapshot) => {
                 snapshot.forEach((doc) => {
                     doc.ref.update({ name: customName });
                 });
             });
 
-            alert("暱稱修改成功！排行榜名字已即時同步更新。");
+            alert("暱稱修改成功");
         }
     }
 
@@ -412,6 +483,10 @@
         timeLeft = GAME_DURATION;
         currentRefreshRate = INITIAL_REFRESH;
         isPlaying = true;
+        
+        throwingField.style.display = 'none';
+        normalGameView.style.display = 'block';
+
         updateUI();
         startBtn.style.display = 'none';
         feedbackEl.innerText = '';
@@ -448,7 +523,7 @@
                 combo = 0; 
                 distance = Math.max(0, distance + PENALTY_TIMEOUT);
                 updateUI();
-                showFeedback('反應太慢！Combo斷了 -2.0m', 'wrong');
+                showFeedback('反應逾時 連擊中斷 扣 2.0m', 'wrong');
                 nextTarget();
             }
         }, currentRefreshRate);
@@ -463,11 +538,11 @@
             let bonus = (combo > 10) ? (combo * 0.12) : (combo * 0.05);
             let gain = BASE_DISTANCE + bonus;
             distance += gain;
-            showFeedback(`精準！ +${gain.toFixed(2)}m`, 'correct');
+            showFeedback(`命中目標 +${gain.toFixed(2)}m`, 'correct');
         } else {
             combo = 0; 
             distance = Math.max(0, distance + PENALTY_WRONG);
-            showFeedback('失誤爆扣！Combo歸零 -3.0m', 'wrong');
+            showFeedback('輸入錯誤 扣 3.0m', 'wrong');
         }
 
         updateUI();
@@ -476,7 +551,7 @@
 
     function updateUI() {
         distanceEl.innerText = distance.toFixed(2);
-        comboEl.innerText = `Combo: ${combo}`;
+        comboEl.innerText = `連擊: ${combo}`;
     }
 
     function showFeedback(text, type) {
@@ -489,25 +564,56 @@
         clearInterval(gameTimer);
         if (refreshTimer) clearTimeout(refreshTimer);
         
-        arrowEl.innerText = '🏁';
-        targetTextEl.innerText = '比賽結束！';
-        
         let finalDist = parseFloat(distance.toFixed(2));
         
+        normalGameView.style.display = 'none';
+        throwingField.style.display = 'block';
+        
+        let maxScale = Math.max(30, Math.ceil(finalDist / 10) * 10 + 10);
+        fieldGrassLine.innerHTML = '';
+        
+        for (let m = 10; m <= maxScale; m += 10) {
+            let marker = document.createElement('div');
+            marker.className = 'track-marker';
+            let posPercent = (m / maxScale) * 85;
+            marker.style.left = posPercent + '%';
+            marker.innerText = m + 'm';
+            fieldGrassLine.appendChild(marker);
+        }
+
+        realJavelin.style.transition = 'none';
+        realJavelin.style.left = '15px';
+        realJavelin.style.bottom = '42px';
+        realJavelin.style.transform = 'rotate(-35deg)';
+        fieldGrassLine.style.transform = 'translateX(0px)';
+
+        let landingPercent = Math.max(12, Math.min(82, (finalDist / maxScale) * 85));
+
+        setTimeout(() => {
+            realJavelin.style.transition = 'all 1.5s cubic-bezier(0.1, 0.8, 0.2, 1)';
+            realJavelin.style.left = landingPercent + '%';
+            realJavelin.style.bottom = '33px';
+            realJavelin.style.transform = 'rotate(22deg)';
+
+            if (landingPercent > 55) {
+                fieldGrassLine.style.transition = 'transform 1.5s cubic-bezier(0.1, 0.8, 0.2, 1)';
+                fieldGrassLine.style.transform = `translateX(-${(landingPercent - 55) * 2.2}px)`;
+            }
+        }, 50);
+
         if (currentUser) {
             uploadScoreToCloud(customName || currentUser.displayName || "匿名玩家", finalDist, currentUser.uid);
         } else {
-            alert("你目前是訪客身份，登入 Google 帳號即可將成績登上全球排行榜！");
+            alert("目前為訪客身份，登入 Google 帳號即可將成績上傳至全球排行榜");
         }
 
-        let evalText = (finalDist >= 98.48) ? '🏆 破世界紀錄！' : (finalDist >= 80) ? '🥇 奧運金牌！' : '🥉 繼續加油！';
-        feedbackEl.innerText = `${evalText} (${finalDist}m)`;
+        let evalText = (finalDist >= 98.48) ? '打破世界紀錄' : (finalDist >= 80) ? '達到奧運金牌水準' : '挑戰完成';
+        feedbackEl.innerText = `${evalText} 總成績: ${finalDist}m`;
         feedbackEl.className = 'feedback-text correct';
-        startBtn.innerText = '重新挑戰';
+        startBtn.innerText = '再次挑戰';
         startBtn.style.display = 'block';
     }
 
-    // 🎯 以 UID 為核心：確保同 UID 只保留最高分，且所有該 UID 的名字永遠保持最新
     function uploadScoreToCloud(name, score, uid) {
         if (!uid) return;
         const leaderboardRef = db.collection("leaderboard");
