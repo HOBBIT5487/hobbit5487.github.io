@@ -533,7 +533,7 @@
         });
     }
 
-    function listenToGlobalLeaderboard() {
+   function listenToGlobalLeaderboard() {
         db.collection("leaderboard")
           .orderBy("score", "desc")
           .limit(5)
@@ -542,15 +542,17 @@
               let rank = 1;
               snapshot.forEach((doc) => {
                   let data = doc.data();
+                  // 🎯 取得 UID 的前 6 碼作為識別
                   let shortUid = data.uid ? data.uid.substring(0, 6) : "guest";
                   let row = document.createElement('div');
                   row.className = 'leaderboard-item';
+                  // 🎯 這裡同時把暱稱與 UID 組合渲染出來
                   row.innerHTML = `
-                      <div style="display: flex; align-items: center; gap: 8px;">
+                      <div style="display: flex; align-items: center; gap: 8px; text-align: left;">
                           <span class="rank-number">${rank}.</span>
                           <div class="player-meta">
                               <span class="player-name">${data.name}</span>
-                              <span class="player-uid">UID: ${shortUid}...</span>
+                              <span class="player-uid" style="font-size: 10px; color: #64748b;">UID: ${shortUid}...</span>
                           </div>
                       </div>
                       <span style="color:#34d399; font-weight:bold; font-size:15px;">${data.score.toFixed(2)}m</span>
