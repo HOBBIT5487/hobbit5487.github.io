@@ -29,7 +29,7 @@
             background-color: #1e293b;
             border-radius: 20px;
             padding: 25px;
-            width: 420px;
+            width: 440px;
             text-align: center;
             box-shadow: 0 10px 30px rgba(0, 0, 0, 0.6);
             border: 2px solid #334155;
@@ -52,11 +52,12 @@
             display: flex;
             align-items: center;
             gap: 8px;
+            text-align: left;
         }
 
         .user-avatar {
-            width: 24px;
-            height: 24px;
+            width: 28px;
+            height: 28px;
             border-radius: 50%;
             display: none;
         }
@@ -177,9 +178,12 @@
         }
 
         .leaderboard-title { color: #f59e0b; font-weight: bold; margin-bottom: 8px; text-align: center; font-size: 14px; }
-        .leaderboard-item { display: flex; justify-content: space-between; padding: 4px 6px; color: #cbd5e1; border-bottom: 1px solid #1e293b; }
+        .leaderboard-item { display: flex; justify-content: space-between; align-items: center; padding: 6px 8px; color: #cbd5e1; border-bottom: 1px solid #1e293b; }
         .leaderboard-item:last-child { border-bottom: none; }
-        .rank-number { font-weight: bold; color: #f59e0b; width: 25px; }
+        .rank-number { font-weight: bold; color: #f59e0b; width: 20px; }
+        .player-meta { display: flex; flex-direction: column; }
+        .player-name { font-weight: bold; color: #f8fafc; font-size: 14px; }
+        .player-uid { font-size: 10px; color: #64748b; }
 
         .ad-sidebar {
             width: 160px;
@@ -217,7 +221,10 @@
         <div class="user-bar">
             <div class="user-info">
                 <img id="user-avatar" class="user-avatar" src="" alt="頭像">
-                <span>玩家: <strong id="username-display" style="color:#38bdf8;">未登入 (訪客)</strong></span>
+                <div>
+                    <div style="font-size: 11px; color: #64748b;" id="uid-subtext">UID: 未登入</div>
+                    <div>玩家: <strong id="username-display" style="color:#38bdf8;">訪客</strong></div>
+                </div>
             </div>
             <div style="display: flex; gap: 5px;">
                 <button id="edit-name-btn" class="user-btn" style="display:none; background:#0284c7;" onclick="customPlayerName()">改暱稱</button>
@@ -276,8 +283,6 @@
     const db = firebase.firestore();
     const auth = firebase.auth();
 
-    localStorage.removeItem('javelin_player_name');
-
     const GAME_DURATION = 20;       
     const INITIAL_REFRESH = 1200;   
     const MIN_REFRESH = 750;        
@@ -310,7 +315,7 @@
     let refreshTimer = null;
     let currentRefreshRate = INITIAL_REFRESH;
     let currentUser = null;
-    let customName = null; // 記錄自訂暱稱
+    let customName = null;
 
     const arrowEl = document.getElementById('arrow-display');
     const targetTextEl = document.getElementById('target-text');
@@ -321,6 +326,7 @@
     const speedEl = document.getElementById('speed-display');
     const startBtn = document.getElementById('start-btn');
     const usernameDisplay = document.getElementById('username-display');
+    const uidSubtext = document.getElementById('uid-subtext');
     const userAvatar = document.getElementById('user-avatar');
     const authBtn = document.getElementById('auth-btn');
     const leaderboardList = document.getElementById('leaderboard-list');
@@ -335,9 +341,10 @@
                 customName = savedCustomName || user.displayName || "匿名玩家";
                 
                 usernameDisplay.innerText = customName;
+                uidSubtext.innerText = `UID: ${user.uid.substring(0, 8)}...`;
                 if (user.photoURL) {
                     userAvatar.src = user.photoURL;
-                    userAvatar.style.display = 'inline-block';
+                    userAvatar.style.display = 'block';
                 }
                 document.getElementById('edit-name-btn').style.display = 'inline-block';
                 authBtn.innerText = "登出";
@@ -345,7 +352,8 @@
             } else {
                 currentUser = null;
                 customName = null;
-                usernameDisplay.innerText = "未登入 (訪客)";
+                usernameDisplay.innerText = "訪客";
+                uidSubtext.innerText = "UID: 未登入";
                 userAvatar.style.display = 'none';
                 document.getElementById('edit-name-btn').style.display = 'none';
                 authBtn.innerText = "Google 登入";
@@ -371,13 +379,13 @@
     function customPlayerName() {
         if (!currentUser) return;
         let defaultName = customName || currentUser.displayName || "匿名玩家";
-        let newName = prompt("請輸入你想在排行榜顯示的遊戲暱稱：", defaultName);
+        let newName = prompt("請輸入你想在排行榜顯示的遊戲暱稱（可與他人重複）：", defaultName);
         
         if (newName && newName.trim() !== "") {
             customName = newName.trim();
             localStorage.setItem('javelin_custom_name_' + currentUser.uid, customName);
             usernameDisplay.innerText = customName;
-            alert("暱稱修改成功！上傳成績時將使用此暱稱。");
+            alert("暱稱修改成功！下次上傳成績或重新整理就會以新暱稱顯示。");
         }
     }
 
@@ -490,16 +498,38 @@
         startBtn.style.display = 'block';
     }
 
+    // 🎯 以 UID 為唯一識別：同 UID 只會保留最高分與最新暱稱，同名也不會衝突
     function uploadScoreToCloud(name, score, uid) {
-        db.collection("leaderboard").add({
-            name: name,
-            score: score,
-            uid: uid,
-            timestamp: firebase.firestore.FieldValue.serverTimestamp()
-        }).then(() => {
-            console.log("成績已同步上傳至雲端！");
+        if (!uid) return;
+        const leaderboardRef = db.collection("leaderboard");
+        
+        leaderboardRef.where("uid", "==", uid).get().then((querySnapshot) => {
+            if (!querySnapshot.empty) {
+                let docId = querySnapshot.docs[0].id;
+                let oldScore = querySnapshot.docs[0].data().score;
+                
+                // 無論分數有沒有破紀錄，都更新成玩家當前最新的暱稱與最新成績
+                if (score > oldScore) {
+                    leaderboardRef.doc(docId).update({
+                        name: name,
+                        score: score,
+                        timestamp: firebase.firestore.FieldValue.serverTimestamp()
+                    });
+                } else {
+                    leaderboardRef.doc(docId).update({
+                        name: name
+                    });
+                }
+            } else {
+                leaderboardRef.add({
+                    name: name,
+                    score: score,
+                    uid: uid,
+                    timestamp: firebase.firestore.FieldValue.serverTimestamp()
+                });
+            }
         }).catch((error) => {
-            console.error("上傳失敗: ", error);
+            console.error("雲端同步失敗: ", error);
         });
     }
 
@@ -512,11 +542,18 @@
               let rank = 1;
               snapshot.forEach((doc) => {
                   let data = doc.data();
+                  let shortUid = data.uid ? data.uid.substring(0, 6) : "guest";
                   let row = document.createElement('div');
                   row.className = 'leaderboard-item';
                   row.innerHTML = `
-                      <span><span class="rank-number">${rank}.</span> ${data.name}</span>
-                      <span style="color:#34d399; font-weight:bold;">${data.score.toFixed(2)}m</span>
+                      <div style="display: flex; align-items: center; gap: 8px;">
+                          <span class="rank-number">${rank}.</span>
+                          <div class="player-meta">
+                              <span class="player-name">${data.name}</span>
+                              <span class="player-uid">UID: ${shortUid}...</span>
+                          </div>
+                      </div>
+                      <span style="color:#34d399; font-weight:bold; font-size:15px;">${data.score.toFixed(2)}m</span>
                   `;
                   leaderboardList.appendChild(row);
                   rank++;
