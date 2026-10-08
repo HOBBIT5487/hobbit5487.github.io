@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>標槍極速反應賽 - 全球線上對戰版</title>
+    <title>極速反應標槍競技場</title>
     <style>
         * {
             box-sizing: border-box;
@@ -93,7 +93,7 @@
         .stat-val { color: #38bdf8; font-size: 18px; }
 
         .stage {
-            height: 180px;
+            height: 220px;
             background: linear-gradient(180deg, #1e293b 0%, #064e3b 100%);
             border-radius: 15px;
             display: flex;
@@ -107,13 +107,17 @@
         }
 
         .arrow-display {
-            font-size: 75px;
+            font-size: 70px;
             line-height: 1;
-            transition: transform 0.05s ease-out;
-            color: #f87171;
+            font-weight: bold;
+            color: #38bdf8;
+            text-shadow: 0 0 15px rgba(56, 189, 248, 0.5);
         }
 
-        /* 擬真標槍與草地刻度投擲動畫區 */
+        .target-hint { font-size: 16px; color: #e2e8f0; margin-top: 8px; font-weight: bold; }
+        .combo-badge { position: absolute; top: 10px; right: 15px; font-size: 13px; color: #f59e0b; font-weight: bold; z-index: 2; }
+
+        /* 🎯 追蹤視角（FPV / 鏡頭跟隨標槍）投擲動畫區 */
         .throwing-field {
             position: absolute;
             width: 100%;
@@ -121,63 +125,79 @@
             display: none;
             top: 0;
             left: 0;
-            background: linear-gradient(180deg, #0f172a 20%, #065f46 100%);
+            background: #14532d;
             overflow: hidden;
         }
 
-        .field-grass-line {
+        /* 長條捲動跑道容器（模擬鏡頭跟隨） */
+        .track-container {
             position: absolute;
-            bottom: 30px;
-            width: 200%;
-            height: 6px;
-            background: #10b981;
-            display: flex;
-            align-items: center;
-            transition: transform 1.5s cubic-bezier(0.1, 0.8, 0.2, 1);
+            bottom: 0;
+            left: 0;
+            width: 400%;
+            height: 100%;
+            background: repeating-linear-gradient(90deg, #166534, #166534 80px, #14532d 80px, #14532d 160px);
+            transition: transform 10s cubic-bezier(0.1, 0.6, 0.2, 1);
         }
 
+        /* 跑道上的刻度標記 */
         .track-marker {
             position: absolute;
-            bottom: 8px;
-            font-size: 11px;
+            bottom: 30px;
+            font-size: 14px;
             color: #fde047;
             font-weight: bold;
             transform: translateX(-50%);
-            border-left: 2px dashed rgba(253, 224, 71, 0.6);
-            height: 40px;
+            border-left: 2px dashed rgba(253, 224, 71, 0.8);
+            height: 120px;
             display: flex;
-            align-items: flex-end;
-            padding-left: 3px;
+            align-items: flex-start;
+            padding-left: 5px;
+            white-space: nowrap;
         }
 
-        /* 真實標槍外觀 */
-        .real-javelin {
+        /* 畫面中央的跟隨標槍 */
+        .follow-javelin {
             position: absolute;
+            bottom: 90px;
+            left: 80px;
             width: 50px;
-            height: 6px;
-            background: linear-gradient(90deg, #f8fafc 0%, #cbd5e1 80%, #b91c1c 100%);
-            border-radius: 3px;
-            bottom: 42px;
-            left: 15px;
-            transform-origin: left center;
-            transform: rotate(-35deg);
-            transition: all 1.5s cubic-bezier(0.1, 0.8, 0.2, 1);
-            z-index: 5;
-            box-shadow: 0 3px 6px rgba(0,0,0,0.4);
+            height: 10px;
+            background: linear-gradient(90deg, #f8fafc 0%, #cbd5e1 75%, #dc2626 100%);
+            border-radius: 4px;
+            transform-origin: center center;
+            transform: rotate(-15deg);
+            z-index: 10;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.5);
+            transition: transform 10s cubic-bezier(0.1, 0.6, 0.2, 1);
         }
-        .real-javelin::after {
+        .follow-javelin::after {
             content: '';
             position: absolute;
             right: -6px;
-            top: -2px;
-            border-top: 5px solid transparent;
-            border-bottom: 5px solid transparent;
-            border-left: 8px solid #f1f5f9;
+            top: 1px;
+            border-top: 4px solid transparent;
+            border-bottom: 4px solid transparent;
+            border-left: 8px solid #f8fafc;
         }
 
-        .target-hint { font-size: 16px; color: #e2e8f0; margin-top: 5px; font-weight: bold; }
-        .combo-badge { position: absolute; top: 10px; right: 15px; font-size: 13px; color: #f59e0b; font-weight: bold; z-index: 2; }
-        .speed-badge { position: absolute; top: 10px; left: 15px; font-size: 12px; color: #f87171; font-weight: bold; z-index: 2; }
+        /* 跳過按鈕（獨立右上角，絕不重疊） */
+        .skip-btn {
+            position: absolute;
+            top: 10px;
+            right: 15px;
+            background: rgba(15, 23, 42, 0.85);
+            color: #38bdf8;
+            border: 1px solid #38bdf8;
+            padding: 4px 10px;
+            border-radius: 6px;
+            font-size: 12px;
+            font-weight: bold;
+            cursor: pointer;
+            z-index: 30;
+            transition: background 0.2s;
+        }
+        .skip-btn:hover { background: #38bdf8; color: #0f172a; }
 
         .feedback-text { height: 24px; font-weight: bold; font-size: 15px; margin-bottom: 15px; }
         .correct { color: #34d399; }
@@ -298,34 +318,34 @@
         </div>
 
         <div class="stage">
-            <div id="speed-display" class="speed-badge">等待: 1.2s</div>
             <div id="combo-display" class="combo-badge">連擊: 0</div>
             
             <!-- 正常遊戲輸入區 -->
             <div id="normal-game-view" style="width: 100%;">
-                <div id="arrow-display" class="arrow-display">▲</div>
+                <div id="arrow-display" class="arrow-display">⬆</div>
                 <div id="target-text" class="target-hint">準備開始挑戰</div>
             </div>
 
-            <!-- 動態草地刻度與真標槍投擲動畫區 -->
+            <!-- 🎯 鏡頭跟隨視角投擲動畫區 -->
             <div id="throwing-field" class="throwing-field">
-                <div style="position: absolute; top: 10px; left: 12px; font-size: 11px; color: #34d399; font-weight: bold; z-index: 10;">標槍落點軌跡</div>
-                <div id="field-grass-line" class="field-grass-line"></div>
-                <div id="real-javelin" class="real-javelin"></div>
+                <button id="skip-btn" class="skip-btn" onclick="skipAnimation()">跳過動畫</button>
+                <div class="track-container" id="track-container">
+                    <div class="follow-javelin" id="follow-javelin"></div>
+                </div>
             </div>
         </div>
 
         <div id="feedback" class="feedback-text"></div>
 
         <div class="controls-grid">
-            <button class="btn-arrow btn-up" onclick="handleInput('ArrowUp')">▲ (W)</button>
-            <button class="btn-arrow btn-left" onclick="handleInput('ArrowLeft')">◄ (A)</button>
-            <button class="btn-arrow btn-down" onclick="handleInput('ArrowDown')">▼ (S)</button>
-            <button class="btn-arrow btn-right" onclick="handleInput('ArrowRight')">► (D)</button>
+            <button class="btn-arrow btn-up" onclick="handleInput('ArrowUp')">⬆ (W)</button>
+            <button class="btn-arrow btn-left" onclick="handleInput('ArrowLeft')">⬅ (A)</button>
+            <button class="btn-arrow btn-down" onclick="handleInput('ArrowDown')">⬇ (S)</button>
+            <button class="btn-arrow btn-right" onclick="handleInput('ArrowRight')">➡ (D)</button>
         </div>
 
         <button id="start-btn" class="start-btn" onclick="startGame()">開始挑戰</button>
-        <div class="instruction">操作提示：使用方向鍵或 WASD 進行反應輸入</div>
+        <div class="instruction">操作提示：使用方向鍵/WASD 進行反應輸入</div>
 
         <div class="leaderboard-section">
             <div class="leaderboard-title">全球即時排行榜 TOP 5</div>
@@ -367,10 +387,10 @@
     };
 
     const dirMap = {
-        'ArrowUp': { text: '向上 (W)', icon: '▲' },
-        'ArrowDown': { text: '向下 (S)', icon: '▼' },
-        'ArrowLeft': { text: '向左 (A)', icon: '◄' },
-        'ArrowRight': { text: '向右 (D)', icon: '►' }
+        'ArrowUp': { text: '向上 (W)', icon: '⬆' },
+        'ArrowDown': { text: '向下 (S)', icon: '⬇' },
+        'ArrowLeft': { text: '向左 (A)', icon: '⬅' },
+        'ArrowRight': { text: '向右 (D)', icon: '➡' }
     };
 
     const directions = ['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'];
@@ -382,21 +402,22 @@
     let isPlaying = false;
     let gameTimer = null;
     let refreshTimer = null;
+    let animationTimer = null;
     let currentRefreshRate = INITIAL_REFRESH;
     let currentUser = null;
     let customName = null;
 
     const normalGameView = document.getElementById('normal-game-view');
     const throwingField = document.getElementById('throwing-field');
-    const fieldGrassLine = document.getElementById('field-grass-line');
-    const realJavelin = document.getElementById('real-javelin');
+    const trackContainer = document.getElementById('track-container');
+    const followJavelin = document.getElementById('follow-javelin');
+    const skipBtn = document.getElementById('skip-btn');
     const arrowEl = document.getElementById('arrow-display');
     const targetTextEl = document.getElementById('target-text');
     const distanceEl = document.getElementById('distance');
     const timeEl = document.getElementById('time');
     const feedbackEl = document.getElementById('feedback');
     const comboEl = document.getElementById('combo-display');
-    const speedEl = document.getElementById('speed-display');
     const startBtn = document.getElementById('start-btn');
     const usernameDisplay = document.getElementById('username-display');
     const uidSubtext = document.getElementById('uid-subtext');
@@ -478,6 +499,7 @@
     });
 
     function startGame() {
+        if (animationTimer) clearTimeout(animationTimer);
         distance = 0.00;
         combo = 0;
         timeLeft = GAME_DURATION;
@@ -506,7 +528,6 @@
 
         let progress = (GAME_DURATION - timeLeft) / GAME_DURATION; 
         currentRefreshRate = Math.max(MIN_REFRESH, INITIAL_REFRESH - (progress * 750));
-        speedEl.innerText = `等待: ${(currentRefreshRate / 1000).toFixed(2)}s`;
 
         let newTarget;
         do {
@@ -559,6 +580,7 @@
         feedbackEl.className = 'feedback-text ' + type;
     }
 
+    // 🎯 10秒鏡頭跟隨（FPV）動畫：刻度隨著跑道向左捲動滑過
     function endGame() {
         isPlaying = false;
         clearInterval(gameTimer);
@@ -568,45 +590,72 @@
         
         normalGameView.style.display = 'none';
         throwingField.style.display = 'block';
+        skipBtn.style.display = 'block'; 
         
-        let maxScale = Math.max(30, Math.ceil(finalDist / 10) * 10 + 10);
-        fieldGrassLine.innerHTML = '';
-        
+        // 清除舊刻度
+        let oldMarkers = trackContainer.querySelectorAll('.track-marker');
+        oldMarkers.forEach(m => m.remove());
+
+        // 每 10 公尺生成一個實體刻度標記在跑道上
+        let maxScale = Math.max(50, Math.ceil(finalDist / 10) * 10 + 20);
         for (let m = 10; m <= maxScale; m += 10) {
             let marker = document.createElement('div');
             marker.className = 'track-marker';
-            let posPercent = (m / maxScale) * 85;
-            marker.style.left = posPercent + '%';
+            // 每個刻度在長跑道上的像素位置（每 10 公尺 = 120px）
+            let markerPosPx = 200 + (m * 12);
+            marker.style.left = markerPosPx + 'px';
             marker.innerText = m + 'm';
-            fieldGrassLine.appendChild(marker);
+            trackContainer.appendChild(marker);
         }
 
-        realJavelin.style.transition = 'none';
-        realJavelin.style.left = '15px';
-        realJavelin.style.bottom = '42px';
-        realJavelin.style.transform = 'rotate(-35deg)';
-        fieldGrassLine.style.transform = 'translateX(0px)';
+        // 重置跟隨標槍與跑道位置
+        trackContainer.style.transition = 'none';
+        trackContainer.style.transform = 'translateX(0px)';
+        followJavelin.style.transition = 'none';
+        followJavelin.style.transform = 'rotate(-25deg)';
 
-        let landingPercent = Math.max(12, Math.min(82, (finalDist / maxScale) * 85));
+        // 計算最終成績對應的跑道位移量像素
+        let targetPx = (finalDist * 12);
 
+        // 啟動 10 秒鏡頭跟隨跑道捲動動畫
         setTimeout(() => {
-            realJavelin.style.transition = 'all 1.5s cubic-bezier(0.1, 0.8, 0.2, 1)';
-            realJavelin.style.left = landingPercent + '%';
-            realJavelin.style.bottom = '33px';
-            realJavelin.style.transform = 'rotate(22deg)';
+            trackContainer.style.transition = 'transform 10s cubic-bezier(0.1, 0.6, 0.2, 1)';
+            trackContainer.style.transform = `translateX(-${targetPx}px)`;
+            
+            // 標槍在空中飛行時稍微有些起伏動態
+            setTimeout(() => {
+                followJavelin.style.transition = 'transform 8s ease-in-out';
+                followJavelin.style.transform = 'rotate(15deg)'; // 落地插入角度
+            }, 8000);
+        }, 100);
 
-            if (landingPercent > 55) {
-                fieldGrassLine.style.transition = 'transform 1.5s cubic-bezier(0.1, 0.8, 0.2, 1)';
-                fieldGrassLine.style.transform = `translateX(-${(landingPercent - 55) * 2.2}px)`;
-            }
-        }, 50);
+        // 10秒後自動結束動畫
+        animationTimer = setTimeout(() => {
+            finishAnimation(finalDist);
+        }, 10000);
 
         if (currentUser) {
             uploadScoreToCloud(customName || currentUser.displayName || "匿名玩家", finalDist, currentUser.uid);
         } else {
             alert("目前為訪客身份，登入 Google 帳號即可將成績上傳至全球排行榜");
         }
+    }
 
+    function skipAnimation() {
+        if (animationTimer) clearTimeout(animationTimer);
+        let finalDist = parseFloat(distance.toFixed(2));
+        let targetPx = (finalDist * 12);
+
+        trackContainer.style.transition = 'none';
+        trackContainer.style.transform = `translateX(-${targetPx}px)`;
+        followJavelin.style.transition = 'none';
+        followJavelin.style.transform = 'rotate(15deg)';
+
+        finishAnimation(finalDist);
+    }
+
+    function finishAnimation(finalDist) {
+        skipBtn.style.display = 'none'; // 動畫結束或跳過時，跳過按鈕同步隱藏
         let evalText = (finalDist >= 98.48) ? '打破世界紀錄' : (finalDist >= 80) ? '達到奧運金牌水準' : '挑戰完成';
         feedbackEl.innerText = `${evalText} 總成績: ${finalDist}m`;
         feedbackEl.className = 'feedback-text correct';
